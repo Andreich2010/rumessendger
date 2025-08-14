@@ -6,6 +6,12 @@ Rumessendger provides a lightweight XMPP messaging stack for local development
 and experimentation.  The project bundles **ejabberd** with a SQL database,
 cache, object storage and auxiliary services so you can explore XMPP features
 without assembling the infrastructure yourself.
+=======
+- **Upload Service** – provides pre-signed S3 URLs for HTTP file uploads.
+  See [services/upload](services/upload/README.md).
+- **Push Gateway** – accepts push notifications from ejabberd and forwards
+  them to FCM or HMS.
+  See [services/push-gateway](services/push-gateway/README.md).
 
 ## Architecture
 
