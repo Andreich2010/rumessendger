@@ -1,0 +1,3 @@
+#!/bin/sh
+# Simple proxy script using system Gradle installation
+exec gradle "$@"
