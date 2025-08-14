@@ -9,8 +9,11 @@ Extract `gradle-wrapper.jar` from the archive's `gradle/wrapper/` directory and 
 # Rumessendger Android Client
 
 This directory contains a minimal Android client that connects to the ejabberd
-server used by the project. It demonstrates basic chat functionality and push
-notification registration (XEP‑0357) using the [Smack](https://www.igniterealtime.org/projects/smack/) library.
+server used by the project. It demonstrates basic chat functionality, stream
+management with automatic reconnection, message archive retrieval (MAM) and
+push notification registration (XEP‑0357) using the
+[Smack](https://www.igniterealtime.org/projects/smack/) library. Encryption can
+be switched between standard server‑side storage and client‑side OMEMO.
 
 ## Configuration
 

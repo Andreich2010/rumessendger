@@ -41,6 +41,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
 
     implementation "org.igniterealtime.smack:smack-android:4.4.6"
+    implementation "org.igniterealtime.smack:smack-tcp:4.4.6"
     implementation "org.igniterealtime.smack:smack-android-extensions:4.4.6"
     implementation "org.igniterealtime.smack:smack-omemo:4.4.6"
     implementation "org.igniterealtime.smack:smack-omemo-signal:4.4.6"

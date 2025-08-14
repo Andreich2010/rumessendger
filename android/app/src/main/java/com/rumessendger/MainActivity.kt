@@ -16,7 +16,8 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             XmppClient.connect()
-            XmppClient.enableOmemo()
+            XmppClient.setEncryption(XmppClient.EncryptionMode.STANDARD)
+            XmppClient.fetchMamHistory(null)
             XmppClient.addIncomingListener(::onIncomingMessage)
         }
     }
