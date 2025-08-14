@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ejabberd
+      POSTGRES_PASSWORD: ejabberd
+      POSTGRES_DB: ejabberd
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  ejabberd:
+    image: ghcr.io/processone/ejabberd:23.10
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    environment:
+      ERLANG_NODE: ejabberd@localhost
+      EJABBERD_LOGLEVEL: 4
+      EJABBERD_CERTFILE: /home/ejabberd/certs/fullchain.pem
+      EJABBERD_KEYFILE: /home/ejabberd/certs/privkey.pem
+    volumes:
+      - ./ejabberd/ejabberd.yml:/home/ejabberd/conf/ejabberd.yml:ro
+      - ./certs:/home/ejabberd/certs:ro
+    ports:
+      - "5222:5222"
+      - "5269:5269"
+      - "5280:5280"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
