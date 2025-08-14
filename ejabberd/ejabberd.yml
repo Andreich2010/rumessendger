@@ -1,0 +1,44 @@
+hosts:
+  - "localhost"
+
+certfiles:
+  - /home/ejabberd/certs/fullchain.pem
+
+listen:
+  -
+    port: 5222
+    module: ejabberd_c2s
+    starttls: true
+  -
+    port: 5269
+    module: ejabberd_s2s_in
+  -
+    port: 5280
+    module: ejabberd_http
+    request_handlers:
+      "/upload": mod_http_upload
+
+auth_method: sql
+sql_type: pgsql
+sql_server: postgres
+sql_database: ejabberd
+sql_username: ejabberd
+sql_password: ejabberd
+
+redis_server: redis
+
+modules:
+  mod_stream_mgmt: {}
+  mod_mam:
+    db_type: sql
+  mod_carboncopy: {}
+  mod_push: {}
+  mod_http_upload:
+    max_size: 10485760
+    s3:
+      host: minio
+      port: 9000
+      bucket: uploads
+      access_key_id: minio
+      secret_access_key: minio123
+      scheme: http
