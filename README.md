@@ -1,5 +1,11 @@
 # rumessendger
 
+## Services
+
+- **Upload Service** – provides pre-signed S3 URLs for HTTP file uploads.
+  See [services/upload](services/upload/README.md).
+
+=======
 This repository contains a simple Docker Compose setup for the messaging stack
 based on **ejabberd**, **PostgreSQL**, **Redis** and **MinIO**. It is intended for
 local development and experimentation.
