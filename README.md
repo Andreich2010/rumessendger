@@ -62,6 +62,13 @@ The stack uses several environment variables which can be overridden with a
 - `PORT`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`,
   `S3_BUCKET` – upload service configuration.
 
+Create a `.env` file from the provided template:
+
+```bash
+cp .env.example .env
+```
+
+
 ### Launching the stack
 
 ```bash
@@ -75,6 +82,22 @@ The services will be available on their default ports:
 - PostgreSQL: 5432
 - Redis: 6379
 - MinIO: 9000 (API) and 9001 (console)
+
+
+### Example requests
+
+Request a slot from the upload service (XEP-0363):
+
+```bash
+curl -X POST http://localhost:8000/slot -H "Content-Type: application/json" -d '{"filename":"hello.txt","size":10,"content_type":"text/plain"}'
+```
+
+Register a device and send a push notification:
+
+```bash
+curl -X POST http://localhost:8000/register -H "Content-Type: application/json" -d '{"token":"abc","jid":"u@d","resource":"r","platform":"fcm"}'
+curl -X POST http://localhost:8000/push -H "Content-Type: application/json" -d '{"token":"abc","title":"Hi","body":"Message"}'
+```
 
 ## TLS certificates
 
@@ -114,4 +137,3 @@ artifacts in a secure location.
 - [Upload Service](services/upload/README.md)
 - [Push Gateway](https://github.com/rumessendger/push-gateway)
 - [Android Client](https://github.com/rumessendger/android-client)
-
