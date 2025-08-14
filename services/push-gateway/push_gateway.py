@@ -1,12 +1,22 @@
 import os
 import json
+import time
 import urllib.request
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+ENV = os.environ.get('ENV', 'DEV').upper()
+RATE_LIMIT = float(os.environ.get('PUSH_RATE_LIMIT_SECONDS', '1'))
+REGISTRATIONS: dict[str, dict[str, str]] = {}
+LAST_PUSH: dict[str, float] = {}
+
+
+def _env_var(name: str) -> str:
+    return os.environ.get(f'{name}_{ENV}', os.environ.get(name, ''))
+
 
 def send_fcm(token: str, title: str, body: str) -> None:
-    server_key = os.environ['FCM_SERVER_KEY']
+    server_key = _env_var('FCM_SERVER_KEY')
     message = {
         'to': token,
         'notification': {'title': title, 'body': body},
@@ -26,8 +36,8 @@ def send_fcm(token: str, title: str, body: str) -> None:
 def _hms_access_token() -> str:
     data = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
-        'client_id': os.environ['HMS_CLIENT_ID'],
-        'client_secret': os.environ['HMS_CLIENT_SECRET'],
+        'client_id': _env_var('HMS_CLIENT_ID'),
+        'client_secret': _env_var('HMS_CLIENT_SECRET'),
     }).encode('utf-8')
     req = urllib.request.Request(
         'https://oauth-login.cloud.huawei.com/oauth2/v3/token',
@@ -40,7 +50,7 @@ def _hms_access_token() -> str:
 
 
 def send_hms(token: str, title: str, body: str) -> None:
-    app_id = os.environ['HMS_APP_ID']
+    app_id = _env_var('HMS_APP_ID') or os.environ['HMS_APP_ID']
     access_token = _hms_access_token()
     url = f'https://push-api.cloud.huawei.com/v1/{app_id}/messages:send'
     message = {
@@ -74,15 +84,31 @@ class PushGatewayHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):  # noqa: N802
+        length = int(self.headers.get('Content-Length', '0'))
+        body = self.rfile.read(length)
+        if self.path == '/register':
+            try:
+                data = json.loads(body)
+                token = data['token']
+                REGISTRATIONS[token] = {
+                    'jid': data['jid'],
+                    'resource': data['resource'],
+                    'platform': data['platform'],
+                }
+            except Exception:  # noqa: BLE001
+                self.send_response(400)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.end_headers()
+            return
+
         if self.path != '/push':
             self.send_response(404)
             self.end_headers()
             return
-        length = int(self.headers.get('Content-Length', '0'))
-        body = self.rfile.read(length)
         try:
             data = json.loads(body)
-            platform = data['platform']
             token = data['token']
             title = data.get('title', '')
             message = data.get('body', '')
@@ -90,14 +116,33 @@ class PushGatewayHandler(BaseHTTPRequestHandler):
             self.send_response(400)
             self.end_headers()
             return
-
+        reg = REGISTRATIONS.get(token)
+        if not reg:
+            self.send_response(404)
+            self.end_headers()
+            return
+        now = time.time()
+        last = LAST_PUSH.get(token, 0)
+        if now - last < RATE_LIMIT:
+            self.send_response(429)
+            self.end_headers()
+            return
+        LAST_PUSH[token] = now
+        platform = reg['platform']
         try:
-            if platform == 'fcm':
-                send_fcm(token, title, message)
-            elif platform == 'hms':
-                send_hms(token, title, message)
-            else:
-                raise ValueError('unknown platform')
+            for attempt in range(3):
+                try:
+                    if platform == 'fcm':
+                        send_fcm(token, title, message)
+                    elif platform == 'hms':
+                        send_hms(token, title, message)
+                    else:
+                        raise ValueError('unknown platform')
+                    break
+                except Exception:  # noqa: BLE001
+                    if attempt == 2:
+                        raise
+                    time.sleep(2 ** attempt)
         except Exception:  # noqa: BLE001
             self.send_response(500)
             self.end_headers()

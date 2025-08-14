@@ -3,15 +3,13 @@ hosts:
 
 certfiles:
   - /home/ejabberd/certs/fullchain.pem
+  - /home/ejabberd/certs/privkey.pem
 
 listen:
   -
     port: 5222
     module: ejabberd_c2s
     starttls: true
-  -
-    port: 5269
-    module: ejabberd_s2s_in
   -
     port: 5280
     module: ejabberd_http
@@ -21,24 +19,31 @@ listen:
 auth_method: sql
 sql_type: pgsql
 sql_server: postgres
-sql_database: ejabberd
-sql_username: ejabberd
-sql_password: ejabberd
+sql_database: "${POSTGRES_DB}"
+sql_username: "${POSTGRES_USER}"
+sql_password: "${POSTGRES_PASSWORD}"
 
 redis_server: redis
+
+ciphers: "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256"
 
 modules:
   mod_stream_mgmt: {}
   mod_mam:
+    default: always
     db_type: sql
   mod_carboncopy: {}
-  mod_push: {}
+  mod_push:
+    service_jid: push.localhost
+  mod_push_keepalive: {}
   mod_http_upload:
     max_size: 10485760
+    custom_headers:
+      Access-Control-Allow-Origin: "*"
     s3:
       host: minio
       port: 9000
       bucket: uploads
-      access_key_id: minio
-      secret_access_key: minio123
+      access_key_id: "${MINIO_ROOT_USER}"
+      secret_access_key: "${MINIO_ROOT_PASSWORD}"
       scheme: http

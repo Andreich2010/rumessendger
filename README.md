@@ -6,7 +6,7 @@ Rumessendger provides a lightweight XMPP messaging stack for local development
 and experimentation.  The project bundles **ejabberd** with a SQL database,
 cache, object storage and auxiliary services so you can explore XMPP features
 without assembling the infrastructure yourself.
-=======
+
 - **Upload Service** – provides pre-signed S3 URLs for HTTP file uploads.
   See [services/upload](services/upload/README.md).
 - **Push Gateway** – accepts push notifications from ejabberd and forwards
@@ -51,7 +51,8 @@ for TLS support.  Self-signed certificates are sufficient for development.
 ### Environment variables
 
 The stack uses several environment variables which can be overridden with a
-`.env` file or in your shell:
+`.env` file or in your shell. An example configuration is provided in
+`.env.example`:
 
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` – database credentials
   for ejabberd.
@@ -70,7 +71,7 @@ docker-compose up -d
 
 The services will be available on their default ports:
 
-- ejabberd: 5222 (C2S), 5269 (S2S), 5280 (Web/HTTP upload)
+- ejabberd: 5222 (C2S), 5280 (Web/HTTP upload)
 - PostgreSQL: 5432
 - Redis: 6379
 - MinIO: 9000 (API) and 9001 (console)
@@ -100,6 +101,12 @@ docker-compose restart ejabberd
 
 The ejabberd configuration is located at `ejabberd/ejabberd.yml`. Adjust this
 file to enable additional modules or change database credentials as needed.
+
+## Backups
+
+A helper script `scripts/backup.sh` performs a nightly PostgreSQL dump and
+records MinIO bucket versions. Configure a cron job to run it and store the
+artifacts in a secure location.
 
 ## Documentation
 

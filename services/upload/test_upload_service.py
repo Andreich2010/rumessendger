@@ -12,6 +12,10 @@ os.environ['S3_SECRET_KEY'] = 'secret'
 os.environ['S3_REGION'] = 'us-east-1'
 os.environ['S3_ENDPOINT'] = 'http://localhost:9000'
 os.environ['S3_BUCKET'] = 'bucket'
+os.environ['MAX_UPLOAD_SIZE'] = '1024'
+os.environ['ALLOWED_TYPES'] = 'text/plain'
+os.environ['UPLOAD_TTL'] = '600'
+os.environ['CORS_ALLOW_ORIGIN'] = '*'
 
 sys.path.append(str(Path(__file__).resolve().parent))
 import upload_service  # noqa: E402
@@ -24,7 +28,11 @@ class UploadServiceTest(unittest.TestCase):
         thread.start()
         port = httpd.server_address[1]
 
-        data = json.dumps({'filename': 'hello.txt'}).encode('utf-8')
+        data = json.dumps({
+            'filename': 'hello.txt',
+            'size': 10,
+            'content_type': 'text/plain',
+        }).encode('utf-8')
         req = urllib.request.Request(
             f'http://localhost:{port}/slot',
             data=data,

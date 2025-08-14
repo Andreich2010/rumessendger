@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 # Set env vars before importing the service
-os.environ['FCM_SERVER_KEY'] = 'test-key'
+os.environ['ENV'] = 'DEV'
+os.environ['FCM_SERVER_KEY_DEV'] = 'test-key'
 os.environ['HMS_APP_ID'] = 'app'
-os.environ['HMS_CLIENT_ID'] = 'client'
-os.environ['HMS_CLIENT_SECRET'] = 'secret'
+os.environ['HMS_CLIENT_ID_DEV'] = 'client'
+os.environ['HMS_CLIENT_SECRET_DEV'] = 'secret'
 
 sys.path.append(str(Path(__file__).resolve().parent))
 import push_gateway  # noqa: E402
@@ -22,6 +23,21 @@ class PushGatewayTest(unittest.TestCase):
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
         return httpd, httpd.server_address[1]
+
+    def _register(self, port: int, platform: str, token: str) -> None:
+        data = json.dumps({
+            'token': token,
+            'jid': 'u@d',
+            'resource': 'r',
+            'platform': platform,
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            f'http://localhost:{port}/register',
+            data=data,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        urllib.request.urlopen(req).close()
 
     def test_health(self):
         httpd, port = self._start()
@@ -39,8 +55,8 @@ class PushGatewayTest(unittest.TestCase):
 
         push_gateway.send_fcm = fake_send
         httpd, port = self._start()
+        self._register(port, 'fcm', 'abc')
         data = json.dumps({
-            'platform': 'fcm',
             'token': 'abc',
             'title': 'Hi',
             'body': 'Message',
@@ -65,8 +81,8 @@ class PushGatewayTest(unittest.TestCase):
 
         push_gateway.send_hms = fake_send
         httpd, port = self._start()
+        self._register(port, 'hms', 'xyz')
         data = json.dumps({
-            'platform': 'hms',
             'token': 'xyz',
             'title': 'Hi',
             'body': 'Message',
