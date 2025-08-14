@@ -7,6 +7,11 @@ import hmac
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+MAX_SIZE = int(os.environ.get('MAX_UPLOAD_SIZE', '10485760'))
+ALLOWED_TYPES = os.environ.get('ALLOWED_TYPES', 'image/png,image/jpeg').split(',')
+UPLOAD_TTL = int(os.environ.get('UPLOAD_TTL', '600'))
+ALLOWED_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN', '*')
+
 
 def _sign(key: bytes, msg: str) -> bytes:
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
@@ -19,7 +24,7 @@ def _signature_key(secret_key: str, date_stamp: str, region: str, service: str) 
     return _sign(k_service, 'aws4_request')
 
 
-def presign_url(method: str, object_key: str, expires: int = 3600) -> str:
+def presign_url(method: str, object_key: str, expires: int = UPLOAD_TTL) -> str:
     access_key = os.environ['S3_ACCESS_KEY']
     secret_key = os.environ['S3_SECRET_KEY']
     region = os.environ.get('S3_REGION', 'us-east-1')
@@ -67,6 +72,20 @@ def presign_url(method: str, object_key: str, expires: int = 3600) -> str:
 
 
 class UploadHandler(BaseHTTPRequestHandler):
+    def _send_cors(self) -> None:
+        self.send_header('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+
+    def do_OPTIONS(self):  # noqa: N802
+        if self.path == '/slot':
+            self.send_response(204)
+            self._send_cors()
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_POST(self):
         if self.path != '/slot':
             self.send_response(404)
@@ -78,7 +97,14 @@ class UploadHandler(BaseHTTPRequestHandler):
         try:
             data = json.loads(body)
             filename = data['filename']
+            size = int(data.get('size', 0))
+            content_type = data.get('content_type', '')
         except Exception:  # noqa: BLE001
+            self.send_response(400)
+            self.end_headers()
+            return
+
+        if size > MAX_SIZE or content_type not in ALLOWED_TYPES:
             self.send_response(400)
             self.end_headers()
             return
@@ -90,6 +116,7 @@ class UploadHandler(BaseHTTPRequestHandler):
         resp = json.dumps({'put': put_url, 'get': get_url, 'key': object_key})
         resp_bytes = resp.encode('utf-8')
         self.send_response(200)
+        self._send_cors()
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(resp_bytes)))
         self.end_headers()

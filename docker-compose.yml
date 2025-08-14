@@ -2,54 +2,76 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ejabberd
-      POSTGRES_PASSWORD: ejabberd
-      POSTGRES_DB: ejabberd
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:7
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio:
-    image: minio/minio
+    image: quay.io/minio/minio:RELEASE.2025-02-07T20-11-15Z
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio_data:/data
+      - minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   ejabberd:
-    image: ghcr.io/processone/ejabberd:23.10
+    image: ghcr.io/processone/ejabberd:24.02
     restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
-      ERLANG_NODE: ejabberd@localhost
-      EJABBERD_LOGLEVEL: 4
-      EJABBERD_CERTFILE: /home/ejabberd/certs/fullchain.pem
-      EJABBERD_KEYFILE: /home/ejabberd/certs/privkey.pem
+      ERLANG_NODE: ${ERLANG_NODE}
+      EJABBERD_LOGLEVEL: ${EJABBERD_LOGLEVEL}
+      EJABBERD_CERTFILE: ${EJABBERD_CERTFILE}
+      EJABBERD_KEYFILE: ${EJABBERD_KEYFILE}
     volumes:
       - ./ejabberd/ejabberd.yml:/home/ejabberd/conf/ejabberd.yml:ro
       - ./certs:/home/ejabberd/certs:ro
     ports:
       - "5222:5222"
-      - "5269:5269"
       - "5280:5280"
+    healthcheck:
+      test: ["CMD", "ejabberdctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
-  postgres_data:
+  pg:
   redis_data:
-  minio_data:
+  minio:
